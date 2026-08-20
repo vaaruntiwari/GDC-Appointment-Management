@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 5 backend regression (5/5 pytest) is now repeatable with dynamic-date + cleanup fixture. All new admin CRUD endpoints (chairs, users, settings) and DELETE /api/bookings/{id} work. Frontend Live-Activity nav, AdminPanel three tabs, chair/user/settings CRUD, role-gated admin nav, session persistence, and logout all work. CRITICAL regression: WebSocket real-time propagation across two clients is broken because the /ws route is not under /api, so the ingress does not proxy it to the backend (no WS connections logged; browser reports 'WebSocket is closed before the connection is established'). All two-page create/status/cancel updates require manual refresh.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "/ws (WebSocket)", "issue": "Route registered as app.websocket('/ws') but the K8s ingress only routes /api/* to backend, so WebSocket handshake never reaches FastAPI. Backend logs show zero WS traffic. Move endpoint to /api/ws (and update WS_URL in App.js to `${REACT_APP_BACKEND_URL}/api/ws`).", "priority": "CRITICAL"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Two-client real-time sync", "issue": "Bookings created/updated/cancelled in client A do not appear in client B without a manual refresh because the WS at wss://<host>/ws fails to connect. Once /ws is moved under /api/ws (and WS_URL updated), propagation should work.", "affected_selectors": ["[data-testid=schedule-view]", "WS_URL in /app/frontend/src/App.js"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Move backend WebSocket route from @app.websocket('/ws') to @app.websocket('/api/ws') (or add a mirror) so it is reachable through the ingress, and update WS_URL in /app/frontend/src/App.js to `${REACT_APP_BACKEND_URL.replace(/^http/, 'ws')}/api/ws`.",
+    "After the fix, re-run the two-client propagation test (create/update/cancel) to confirm client B updates within ~2s without refresh."
+  ],
+  "critical_code_review_comments": [
+    "server.py: WebSocket endpoint is outside the /api prefix; every other public route uses APIRouter(prefix='/api'). The mismatch breaks ingress routing in this environment.",
+    "server.py: broadcast() serially awaits every socket; a slow client will delay events for all. Consider asyncio.gather with return_exceptions=True.",
+    "Board.jsx and ActivityView.jsx open independent WebSocket connections; consolidating in a context provider would prevent duplicate opens on remount.",
+    "ActivityView.jsx: the auth object is recreated each render but useCallback deps only track [date], which is fine, but eslint-react-hooks would flag it.",
+    "SettingsAdmin: after changing slot_interval, other clients only see the new grid on next load; the change is not broadcast (would benefit from a settings_changed WS event).",
+    "Frontend uses localStorage for session token while backend also sets an httpOnly cookie; two auth mechanisms in parallel work but are duplicative — pick one."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_5.json",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "success_rate": {"backend": "100% (5/5 pytest, repeatable)", "frontend": "≈92% (all single-client flows pass; two-client WS propagation fails)"},
+  "test_credentials": "admin/admin123, reception/reception123, doctor/doctor123 (from seed_admin in server.py startup)",
+  "seed_data_creation": "During UI test, added TEST_Chair_* and a testu* staff account via AdminPanel; created and cancelled a TEST_ booking at 20:30/20:00 on today via BookingDialog. All artifacts flagged with TEST_ prefix for easy cleanup.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend pytest suite (5 tests) is stable and re-runnable. Admin panel + activity view UI fully works. Only outstanding item: the /ws endpoint is unreachable through the preview ingress; once moved under /api the two-client propagation flow (create -> arrived -> cancel) needs to be re-verified. Playwright's page.on('websocket') was used to confirm attempts, and backend logs showed no WS entries at all, confirming the ingress does not proxy /ws.",
+  "rca of the issue": "FastAPI declares @app.websocket('/ws'). The Kubernetes ingress in this preview environment only forwards paths beginning with /api to the backend service on port 8001; anything else (including /ws) is served by the frontend origin, which cannot upgrade to a WebSocket. As a result the browser sees 'WebSocket is closed before the connection is established', the connections set on the backend stays empty, and broadcast() sends to nobody. Mitigation: register the endpoint at /api/ws and update WS_URL in App.js to match. Two-client real-time sync will then work as designed."
+}

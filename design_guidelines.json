@@ -1,0 +1,65 @@
+{
+  "project": "Dental Chair Operations Board",
+  "context": "Dashboard / internal clinic operations",
+  "theme": "Light-first with optional dark mode",
+  "design_concepts": [
+    {"name":"Clinical Command Grid","probability":0.38,"direction":"High-clarity Swiss operations board with warm paper-white surfaces, visible grid skeleton, rust action accents, and compact chair lanes.","emotional_goal":"calm control under pressure"},
+    {"name":"Paper Diary Rebuilt","probability":0.24,"direction":"Digital translation of a trusted paper diary: ruled time columns, ink-like labels, marginal date notes, and tactile status marks without skeuomorphic clutter.","emotional_goal":"familiarity and confidence"},
+    {"name":"Quiet Triage","probability":0.16,"direction":"Monochrome scheduling canvas with one signal color reserved for conflicts and one arrival color for flow; strong hierarchy for reception speed.","emotional_goal":"reduced cognitive load"},
+    {"name":"Chair Atlas","probability":0.12,"direction":"Nine-chair matrix treated like a spatial map, with drill-down rail, chair identity chips, and an understated architectural coordinate system.","emotional_goal":"orientation and ownership"},
+    {"name":"Shift Ledger","probability":0.10,"direction":"Editorial operations dashboard using serif date typography, mono time labels, and dense but breathable ledger rows for doctor-heavy scheduling.","emotional_goal":"precision with human warmth"}
+  ],
+  "selected_direction": {
+    "name":"Clinical Command Grid",
+    "rationale":"The tool is used by reception and doctors during live operations. A light, cardless, high-density grid makes all 9 chairs scannable at once while warm neutrals prevent the cold hospital-template feeling. The paper-diary reference is fused with Swiss information design and architectural wayfinding.",
+    "references": [
+      {"source":"SaaSFrame calendar patterns","descriptors":["day/week/agenda pattern options","quick-create plus full editor","explicit overlap and conflict handling","color-coded event states"]},
+      {"source":"Healthcare dashboard curated examples","descriptors":["appointment-first hierarchy","doctor and operations management surfaces","clear upcoming appointment lists","high legibility admin layouts"]}
+    ],
+    "breaks_pattern":"The schedule is not a conventional centered calendar or collection of rounded cards. The live board occupies the visual center, while controls form a left utility rail and the right side remains an optional detail drawer; this creates operational tension and keeps the user's eye on time intersections."
+  },
+  "typography": {
+    "heading_font":"Manrope",
+    "body_font":"IBM Plex Sans",
+    "mono_font":"IBM Plex Mono",
+    "rules":["Use Manrope 650-800 for page and section headings; never use Inter for headings.","Use IBM Plex Sans for labels, forms, tables, and body copy.","Use IBM Plex Mono for time labels, chair IDs, booking IDs, and conflict messages.","H1 max text-4xl sm:text-5xl lg:text-6xl; H2 max text-2xl sm:text-3xl lg:text-4xl.","Overlines are uppercase text-xs with tracking-[0.2em]. Headings use tracking-tight and leading-none; body uses leading-relaxed."]
+  },
+  "colors": {
+    "archetype":"Swiss & high-contrast with warm paper tint",
+    "tokens":{"background":"#F7F6F2","surface":"#FFFDFC","surface_alt":"#EFEEE9","ink":"#20262B","muted_ink":"#5E686D","line":"#D7D9D5","primary":"#A9412B","primary_hover":"#87321F","arrived":"#1E6A55","completed":"#49616B","cancelled":"#85545A","no_show":"#8B621C","conflict":"#B3261E","focus":"#174A73"},
+    "rules":["Use color as function only; 85-90% of UI stays neutral.","Never use pure black, pure gray, teal-blue, or full-screen gradients.","Primary rust is reserved for create booking and high-priority actions.","Status chips must include text, not color alone; verify at least 4.5:1 for normal text and 3:1 for large text.","Use solid surfaces in the header and schedule; no complete transparent overlays."]
+  },
+  "layouts": {
+    "app_shell":"Desktop: fixed 248px solid left navigation rail, sticky 72px top utility header, schedule workspace. Tablet: collapsible rail and horizontal toolbar. Mobile: stacked day agenda with chair selector; do not attempt to shrink all 9 columns below usability.",
+    "primary_board":"Use a high-density grid: grid-cols-1 lg:grid-cols-4 for summary/filter widgets, then a full-width schedule canvas. Schedule has a sticky chair-name column and horizontally scrollable time lanes. All 9 chairs remain simultaneously visible on desktop.",
+    "schedule_geometry":"Rows are chairs, columns are configured intervals from 09:00 to 21:00. Use 30-minute default with 15/30/60 configurable. Booking blocks span their duration and show doctor plus patient name/ID.",
+    "right_drawer":"Booking details/edit drawer opens from the right without losing board context. On mobile use a Shadcn Sheet.",
+    "spacing":"Use p-6 and p-8 within bordered surfaces, gap-4 to gap-6 for dense dashboard widgets, and larger py-12 section separation. Avoid jagged bottoms with h-full and align-items:start.",
+    "grid_protocol":"Use visible 1px grid borders, rectangular surfaces, max 8px radius. Do not overuse Card; use raw div/section for the board and Shadcn components for interactions."
+  },
+  "component_name": {
+    "navigation":"OperationsRail",
+    "header":"LiveClinicHeader",
+    "board":"ChairScheduleBoard",
+    "chair_row":"ChairLane",
+    "booking":"BookingBlock",
+    "booking_dialog":"BookingEditorDialog",
+    "filters":"ScheduleFilters",
+    "details":"BookingDetailsSheet",
+    "admin":"AdminControlPanels",
+    "activity":"LiveActivityFeed",
+    "status":"BookingStatusBadge",
+    "conflict":"ConflictAlert"
+  },
+  "component_path":"/app/frontend/src/components/ (JavaScript .js/.jsx files only; do not create .tsx files)",
+  "interaction_rules": ["Use Shadcn Dialog, Sheet, Select, Calendar, DropdownMenu, Form, Input, and Sonner for interactions; never native select/date picker.","Create booking is a fast path: click empty slot, prefill chair/date/time, then choose doctor and enter patient name/ID and duration.","Conflict responses are server authoritative: show the conflicting chair/time and preserve entered data for correction.","Reschedule preserves cancelled history and creates the replacement booking atomically.","Use hover to elevate booking blocks, active press scale subtly, and explicit high-contrast focus rings.","Every button, link, input, menu, booking block, status, conflict message, date control, filter, and confirmation text must include a stable kebab-case data-testid."] ,
+  "motion": {"principles":["Micro-interactions only; prioritize speed over spectacle.","Stagger navigation and board entrance by 30-50ms.","Animate booking block transform and opacity, never transition all.","Use a brief pulse on a newly synced booking and a shake-free inline conflict alert.","Respect prefers-reduced-motion by disabling entrance, pulse, and transform animations."],"durations":"120-220ms for controls; 250-350ms for drawers and dialogs"},
+  "visual_enhancers": ["Subtle warm grain/noise texture at very low opacity on the app shell, aria-hidden.","Thin architectural crosshair/date marker for current time.","Small paper-rule dividers and mono time labels to echo the diary without decorative clutter.","Customized scrollbar with no gutter; retain visible horizontal scrolling for the schedule."],
+  "accessibility": {"requirements":["Keyboard navigation across schedule cells and booking blocks; Enter opens editor, Escape closes overlays.","Use aria-labels for chair rows, time cells, filters, and status changes.","Do not rely on color for Booked, Patient Arrived, Completed, Cancelled, or No-show.","Focus ring must be visible against warm surfaces; conflict and success feedback must be announced.","Maintain 4.5:1 normal text contrast, 3:1 large text and controls, and test at 200% zoom."],"test_ids":"Use role-based names such as schedule-date-next-button, chair-03-lane, booking-create-submit-button, booking-conflict-alert, booking-status-select, admin-user-save-button."},
+  "media": {"required":false,"guidance":"No stock photography is needed for this internal dashboard. Do not add placeholder image URLs, avatars, or decorative medical imagery. Use CSS geometry and icons only."},
+  "3d_libraries": {"required":false,"decision":"Clarity beats immersion for a live scheduling board. Do not add R3F, WebGL, or decorative particle systems.","optional_libraries":["lucide-react for interface icons","sonner for toast notifications"]},
+  "permissions_and_data": {"roles":{"Admin":["full board access","manage chairs, users, clinic hours, interval settings","edit/cancel/status bookings"],"Reception":["create/edit/reschedule/cancel bookings","update arrival/completion/no-show","filter and navigate dates"],"Doctor":["view board","filter own bookings","update allowed status according to product policy"]},"booking_fields":["chair_id","date","start_time","end_time","duration_minutes","doctor_id","patient_name","patient_id","status","created_by","cancelled_at","cancel_reason"],"server_rules":["enforce chair/time overlap prevention transactionally","validate clinic hours and configured interval","broadcast booking create/update/cancel/status events over native FastAPI WebSocket","re-check conflict on every write; client checks are advisory only"]},
+  "documentation_to_include": ["Architecture overview: React dashboard, FastAPI REST plus native WebSocket channel, MongoDB persistence.","MongoDB collection/schema notes for users, chairs, settings, bookings, and cancelled history.","Role/permission matrix and API endpoint list.","Demo accounts: admin/admin123, reception/reception123, doctor/doctor123; clearly mark these as development credentials only."],
+  "GENERAL UI UX DESIGN GUIDELINES": ["Prioritize usable MVP speed and clarity over decorative novelty.","Every page has visible navigation with brand, 3-5 links, and a primary action on desktop.","Never use a transparent header or transparent content surface over underlying content; use solid or opaque glass with blur and border.","Avoid generic centered layouts, uniform cards, excessive gradients, emoji icons, and Inter headings.","Use generous spacing, layered hierarchy, crisp borders, and explicit hover/active/focus states.","All key interactive and informational elements require data-testid attributes.","Do not build EMR, billing/payments, patient medical records, SMS/WhatsApp integrations, public self-booking, native mobile app, or multi-clinic support.","Use .js/.jsx implementation files, not .tsx files."],
+  "instructions_to_main_agent":"Implement the selected Clinical Command Grid direction in the existing React/FastAPI project. Preserve the schedule as the dominant interaction, use existing Shadcn primitives for dialogs/forms/selects/sheets/toasts, and keep the board cardless and operational. Validate responsive desktop/tablet behavior, WebSocket refresh states, server conflict errors, permissions, and data-testid coverage before handoff."
+}

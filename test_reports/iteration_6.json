@@ -1,0 +1,26 @@
+{
+  "summary": "Retested WebSocket real-time propagation after fix moving endpoint to /api/ws. All 4 targeted scenarios passed with two independent reception browser contexts.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_results": {
+    "ws_handshake_open_to_/api/ws": "PASS (both contexts opened wss://chair-board.preview.emergentagent.com/api/ws and stayed open; no close/error frames on the app WS)",
+    "test_1_create_propagation": "PASS - Context A created booking (Chair 1, 09:00, 30min, unique patient 'WSTest 60181'); Context B rendered the occupied slot within ~3s without refresh.",
+    "test_2_status_arrived_propagation": "PASS - Context A set status=arrived; Context B slot class updated to 'slot occupied arrived' and pill text 'Arrived' without refresh.",
+    "test_3_cancel_propagation": "PASS - Context A clicked booking-cancel-appt-button; Context B slot disappeared / re-rendered without refresh.",
+    "test_4_activity_live_update": "PASS - Context B switched to Live activity; Context A created booking 'ActTest 75205'; row appeared in B's activity view without manual refresh."
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py: @app.websocket is registered on the app, not the /api router - explicit '/api/ws' path is fine but consider moving to api router for consistency.",
+    "Board.jsx / ActivityView.jsx WS listeners have no auto-reconnect on close; a network blip will silently break realtime until page reload. Consider a small reconnect w/ backoff.",
+    "WS broadcast payload uses only {date} filter - fine for schedule but Activity view could also filter to avoid unnecessary reloads."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Two bookings created for reception user on today's date (Chair 1, 09:00). One cancelled during Test 3, the second ('ActTest ...') remains active - main agent may want to clean up.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "WebSocket propagation is fully working after moving endpoint to /api/ws. Playwright confirmed WS opens to wss://.../api/ws in both contexts and receives push events triggering re-fetches on Board and ActivityView. No further action required on this bug.",
+  "rca of the issue": "Iteration 5: WS route was outside /api and Kubernetes ingress only proxies /api/* to backend, so wss handshake failed. Fix: move backend to @app.websocket('/api/ws') and set frontend WS_URL to `${REACT_APP_BACKEND_URL.replace(/^http/, 'ws')}/api/ws`. Confirmed resolved."
+}

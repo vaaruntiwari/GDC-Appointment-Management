@@ -1,0 +1,22 @@
+{
+  "summary": "Backend auth, role permissions, cookie /me, cancellation/history, and fresh UI login/board/quick-add were tested. Occupied booking status editing is blocked in the UI by an invalid PATCH payload.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [{"endpoint": "/api/bookings/{booking_id}", "issue": "Existing regression test uses fixed 2099-01-01 data and fails with 409 on repeat; test isolation/cleanup is needed."}]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [{"flow": "Occupied booking status update/cancel", "issue": "BookingDialog submits the complete form including chair_id, date, start_time, and duration_minutes for an existing booking. Backend correctly rejects slot-changing fields with 400, so status updates and cancellation cannot be completed from the UI.", "affected_selectors": ["[data-testid=booking-status-select]", "[data-testid=booking-update-submit-button]", "[data-testid=booking-conflict-alert]"]}],
+    "design_issues": [{"screen": "Mobile schedule", "issues": ["The responsive board remains a horizontally scrollable 9-column grid; this was observed as the current mobile strategy, not a blocking overflow defect."]}]
+  },
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": ["When editing an occupied booking, submit only mutable fields (status, patient_name, patient_id) or make the backend ignore unchanged slot fields; then retest status and cancellation UI.", "Use unique dates and cleanup fixtures in backend regression tests to avoid repeat-run 409 collisions."],
+  "critical_code_review_comments": ["BookingDialog reuses the create payload for PATCH, contradicting the backend's safe slot-change guard and breaking the required occupied status workflow.", "The existing backend test suite is not repeatable because it leaves fixed-date bookings in the shared database."],
+  "updated_files": ["/app/test_reports/iteration_3.json", "/app/test_reports/pytest/pytest_results.xml"],
+  "success_rate": {"backend": "75% (4 tests; 1 repeatability failure)", "frontend": "75% (login, 9-chair/24-row board, quick-add passed; status/cancel failed)"},
+  "seed_data_creation": "Created one TEST_HISTORY-prefixed booking on a unique future date, cancelled it, and verified it through /api/bookings/history.",
+  "retest_needed": true,
+  "should_call_test_agent_after_fix": true,
+  "context_for_next_testing_agent": "Fresh reception login and board dimensions passed. Cookie login and /api/auth/me passed with HttpOnly cookie. Fix the PATCH payload in BookingDialog before retesting occupied status/cancel and WebSocket refresh across two pages.",
+  "rca of the issue": "BookingDialog initializes form state with immutable slot fields and sends the entire form object for PATCH. The backend deliberately rejects any request containing chair/date/start/duration to prevent unsafe rescheduling, producing the visible 400 error 'Rescheduling requires a new conflict-checked booking'."
+}
