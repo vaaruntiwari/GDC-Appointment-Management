@@ -10,8 +10,8 @@
   /* Status colors (Confirmed=blue, Arrived=orange, Completed=green, Cancelled=red, No-show=gray) */
   --status-confirmed:#1d5fbf;
   --status-confirmed-bg:#e4ecf8;
-  --status-arrived:#c5701f;
-  --status-arrived-bg:#fbecd8;
+  --status-arrived:#a37307;
+  --status-arrived-bg:#fdf3cf;
   --status-completed:#1e6a55;
   --status-completed-bg:#dcefe7;
   --status-cancelled:#b3261e;
