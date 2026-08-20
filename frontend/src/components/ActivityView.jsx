@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { RefreshCw } from "lucide-react";
-import { API, WS_URL, statusLabels, today, fmtDate } from "../App";
+import { API, connectWS, statusLabels, today, fmtDate } from "../App";
 
 export default function ActivityView({ user, session, chairs, doctors, initialDate }) {
   const [date, setDate] = useState(initialDate || today());
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const auth = { headers: { Authorization: `Bearer ${session.token}` } };
+  const auth = useMemo(() => ({ headers: { Authorization: `Bearer ${session.token}` } }), [session.token]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -17,29 +17,26 @@ export default function ActivityView({ user, session, chairs, doctors, initialDa
     } finally {
       setLoading(false);
     }
-  }, [date]);
+  }, [auth, date]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   useEffect(() => {
-    const ws = new WebSocket(WS_URL);
-    ws.onmessage = (e) => {
-      try {
-        const msg = JSON.parse(e.data);
-        if (msg.date === date) load();
-      } catch (err) {
-        // ignore malformed messages
-      }
-    };
-    return () => ws.close();
+    const conn = connectWS({
+      onMessage: (msg) => {
+        if (msg.type === "booking_changed" && msg.date === date) load();
+      },
+      onReconnect: () => load(),
+    });
+    return () => conn.close();
   }, [date, load]);
 
   const chairLabel = (id) => chairs.find((c) => c.id === id)?.label || "—";
   const doctorName = (id) => doctors.find((d) => d.id === id)?.name || "—";
 
-  // Group by booking_id to show one row per appointment
+  // One row per booking_id, most recently updated first.
   const grouped = Object.values(
     history.reduce((acc, row) => {
       const cur = acc[row.booking_id];
@@ -88,6 +85,7 @@ export default function ActivityView({ user, session, chairs, doctors, initialDa
                 <th>Chair</th>
                 <th>Patient</th>
                 <th>Doctor</th>
+                <th>Treatment</th>
                 <th>Status</th>
                 <th>Last updated</th>
               </tr>
@@ -102,6 +100,7 @@ export default function ActivityView({ user, session, chairs, doctors, initialDa
                     {row.patient_id && <small> · {row.patient_id}</small>}
                   </td>
                   <td>{doctorName(row.doctor_id)}</td>
+                  <td className="clamp-cell">{row.treatment_details || "—"}</td>
                   <td>
                     <span className={`status-pill ${row.status}`}>{statusLabels[row.status]}</span>
                   </td>

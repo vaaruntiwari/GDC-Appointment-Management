@@ -7,9 +7,11 @@ import "@/App.css";
 export const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 export const WS_URL = `${process.env.REACT_APP_BACKEND_URL.replace(/^http/, "ws")}/api/ws`;
 
+// Consistent status vocabulary across the app.
+// Backend keys are unchanged ("booked" etc); only the user-visible labels change.
 export const statusLabels = {
-  booked: "Booked",
-  arrived: "Arrived",
+  booked: "Confirmed",
+  arrived: "Patient Arrived",
   completed: "Completed",
   cancelled: "Cancelled",
   "no-show": "No-show",
@@ -33,6 +35,58 @@ axios.interceptors.response.use(
   }
 );
 axios.defaults.withCredentials = true;
+
+/**
+ * Robust WebSocket helper with exponential backoff reconnect.
+ * Returns an object with `close()` to permanently stop.
+ * `onMessage` receives parsed JSON messages. `onReconnect` fires each time a
+ * new connection is (re)established so the caller can refetch state.
+ */
+export function connectWS({ onMessage, onReconnect } = {}) {
+  let ws = null;
+  let closed = false;
+  let attempt = 0;
+  let timer = null;
+
+  const open = () => {
+    if (closed) return;
+    ws = new WebSocket(WS_URL);
+    ws.onopen = () => {
+      attempt = 0;
+      if (onReconnect) onReconnect();
+    };
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (onMessage) onMessage(msg);
+      } catch (_err) {
+        // ignore malformed frames
+      }
+    };
+    ws.onclose = () => {
+      if (closed) return;
+      attempt += 1;
+      const delay = Math.min(30000, 1000 * Math.pow(2, Math.min(attempt, 5)));
+      timer = setTimeout(open, delay);
+    };
+    ws.onerror = () => {
+      try {
+        ws.close();
+      } catch (_err) {
+        // no-op
+      }
+    };
+  };
+  open();
+
+  return {
+    close() {
+      closed = true;
+      if (timer) clearTimeout(timer);
+      if (ws && ws.readyState <= 1) ws.close();
+    },
+  };
+}
 
 function App() {
   const [session, setSession] = useState(() => JSON.parse(localStorage.getItem("chairSession") || "null"));

@@ -20,9 +20,9 @@ export default function Login({ onLogin }) {
 
   return (
     <main className="login-page">
-      <div className="login-mark">CB</div>
-      <p className="eyebrow">CLINIC OPERATIONS</p>
-      <h1>Chair Board</h1>
+      <img src="/gdc-logo.jpg" alt="Goregaon Dental Centre" className="login-logo" />
+      <p className="eyebrow">GOREGAON DENTAL CENTRE</p>
+      <h1>GDC Chair Appointment Dashboard</h1>
       <p className="login-copy">The live diary for every chair, every appointment, every shift.</p>
       <form onSubmit={submit} className="login-form">
         <label>
@@ -47,7 +47,7 @@ export default function Login({ onLogin }) {
           Sign in <ChevronRight size={17} />
         </button>
       </form>
-      <p className="demo-note">Demo access: admin / admin123</p>
+      <p className="demo-note">Demo access: admin / admin123 · reception / reception123 · doctor / doctor123</p>
     </main>
   );
 }

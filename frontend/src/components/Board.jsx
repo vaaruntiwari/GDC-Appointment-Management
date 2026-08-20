@@ -1,20 +1,28 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
+  BarChart3,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
+  ListChecks,
   LogOut,
   Plus,
+  Printer,
   RefreshCw,
   Settings2,
   ShieldCheck,
   UserRound,
+  WifiOff,
 } from "lucide-react";
-import { API, WS_URL, statusLabels, today, fmtDate } from "../App";
+import { API, connectWS, fmtDate, statusLabels, today } from "../App";
 import BookingDialog from "./BookingDialog";
 import ActivityView from "./ActivityView";
 import AdminPanel from "./AdminPanel";
+import Waitlist from "./Waitlist";
+import WeeklySummary from "./WeeklySummary";
+import DaySheet from "./DaySheet";
 
 export default function Board({ session, logout }) {
   const user = session.user;
@@ -30,6 +38,7 @@ export default function Board({ session, logout }) {
   const [dialog, setDialog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("schedule");
+  const [wsOnline, setWsOnline] = useState(true);
 
   const auth = useMemo(() => ({ headers: { Authorization: `Bearer ${session.token}` } }), [session.token]);
 
@@ -51,17 +60,20 @@ export default function Board({ session, logout }) {
     load();
   }, [load]);
 
+  // Persistent WS with auto-reconnect
   useEffect(() => {
-    const ws = new WebSocket(WS_URL);
-    ws.onmessage = (e) => {
-      try {
-        const msg = JSON.parse(e.data);
-        if (msg.date === date) load();
-      } catch (err) {
-        // ignore malformed messages
-      }
-    };
-    return () => ws.close();
+    setWsOnline(false);
+    const conn = connectWS({
+      onMessage: (msg) => {
+        if (msg.type === "booking_changed" && msg.date === date) load();
+        if (msg.type === "settings_changed") load();
+      },
+      onReconnect: () => {
+        setWsOnline(true);
+        load(); // reconcile board state on (re)connect
+      },
+    });
+    return () => conn.close();
   }, [date, load]);
 
   const times = useMemo(() => {
@@ -81,41 +93,54 @@ export default function Board({ session, logout }) {
     );
   const doctorName = (id) => data.doctors.find((d) => d.id === id)?.name || "Doctor";
 
+  const promoteFromWaitlist = (entry) => {
+    setDialog({
+      chair_id: entry.preferred_chair_id || data.chairs[0]?.id || "",
+      date: entry.preferred_date || date,
+      time: entry.preferred_time_from || data.settings.open_time,
+      existing: null,
+      prefill: entry,
+      waitlist_id: entry.id,
+    });
+    setView("schedule");
+  };
+
+  const NavButton = ({ id, icon: Icon, label, roles }) => {
+    if (roles && !roles.includes(user.role)) return null;
+    return (
+      <button
+        className={view === id ? "nav-active" : ""}
+        data-testid={`${id}-nav-button`}
+        onClick={() => setView(id)}
+      >
+        <Icon size={18} /> {label}
+      </button>
+    );
+  };
+
   return (
     <div className="app-shell">
-      <aside className="rail">
+      <aside className="rail no-print">
         <div className="brand">
-          <span className="brand-mark">CB</span>
+          <img src="/gdc-logo.jpg" alt="GDC" className="brand-mark-img" />
           <span>
-            Chair Board<small>OPERATIONS</small>
+            GDC Chair Board<small>APPOINTMENT DASHBOARD</small>
           </span>
         </div>
         <nav>
-          <button
-            className={view === "schedule" ? "nav-active" : ""}
-            data-testid="schedule-nav-button"
-            onClick={() => setView("schedule")}
-          >
-            <CalendarDays size={18} /> Schedule
-          </button>
-          <button
-            className={view === "activity" ? "nav-active" : ""}
-            data-testid="activity-nav-button"
-            onClick={() => setView("activity")}
-          >
-            <RefreshCw size={18} /> Live activity
-          </button>
-          {user.role === "admin" && (
-            <button
-              className={view === "admin" ? "nav-active" : ""}
-              data-testid="admin-nav-button"
-              onClick={() => setView("admin")}
-            >
-              <Settings2 size={18} /> Admin controls
-            </button>
-          )}
+          <NavButton id="schedule" icon={CalendarDays} label="Schedule" />
+          <NavButton id="activity" icon={RefreshCw} label="Live activity" />
+          <NavButton id="waitlist" icon={ListChecks} label="Waitlist" roles={["admin", "reception"]} />
+          <NavButton id="day-sheet" icon={Printer} label="Day sheet" roles={["admin", "reception"]} />
+          <NavButton id="weekly" icon={BarChart3} label="Weekly summary" roles={["admin"]} />
+          <NavButton id="admin" icon={Settings2} label="Admin controls" roles={["admin"]} />
         </nav>
         <div className="rail-bottom">
+          {!wsOnline && (
+            <div className="ws-offline" data-testid="ws-offline-indicator">
+              <WifiOff size={14} /> Reconnecting…
+            </div>
+          )}
           <div className="signed-in">
             <span className="avatar">
               <UserRound size={17} />
@@ -136,7 +161,7 @@ export default function Board({ session, logout }) {
           <header className="topbar">
             <div>
               <p className="eyebrow">
-                LIVE SCHEDULE <span className="live-dot" /> SYNCED
+                LIVE SCHEDULE <span className={`live-dot ${wsOnline ? "" : "offline"}`} /> {wsOnline ? "SYNCED" : "OFFLINE"}
               </p>
               <h1>Today’s chair board</h1>
             </div>
@@ -228,7 +253,7 @@ export default function Board({ session, logout }) {
               </span>
             ))}
             <span className="sync-note">
-              <span className="live-dot" /> Live across all screens
+              <span className={`live-dot ${wsOnline ? "" : "offline"}`} /> {wsOnline ? "Live across all screens" : "Reconnecting…"}
             </span>
           </section>
           <section className="board-wrap">
@@ -290,6 +315,18 @@ export default function Board({ session, logout }) {
         <ActivityView user={user} session={session} chairs={data.chairs} doctors={data.doctors} initialDate={date} />
       )}
 
+      {view === "waitlist" && (user.role === "admin" || user.role === "reception") && (
+        <Waitlist session={session} chairs={data.chairs} doctors={data.doctors} onPromote={promoteFromWaitlist} />
+      )}
+
+      {view === "day-sheet" && (user.role === "admin" || user.role === "reception") && (
+        <DaySheet session={session} chairs={data.chairs} doctors={data.doctors} />
+      )}
+
+      {view === "weekly" && user.role === "admin" && (
+        <WeeklySummary session={session} doctors={data.doctors} chairs={data.chairs} />
+      )}
+
       {view === "admin" && user.role === "admin" && <AdminPanel session={session} onChanged={load} />}
 
       {dialog && (
@@ -299,8 +336,23 @@ export default function Board({ session, logout }) {
           chairs={data.chairs}
           doctors={data.doctors}
           user={user}
+          prefill={dialog.prefill}
           onClose={() => setDialog(null)}
-          onSaved={load}
+          onSaved={async () => {
+            await load();
+            // If this booking originated from a waitlist promotion, mark that entry scheduled.
+            if (dialog.waitlist_id && !dialog.existing) {
+              try {
+                await axios.patch(
+                  `${API}/waitlist/${dialog.waitlist_id}`,
+                  { status: "scheduled" },
+                  auth
+                );
+              } catch (_err) {
+                // non-blocking
+              }
+            }
+          }}
         />
       )}
     </div>
