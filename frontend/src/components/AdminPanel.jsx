@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import {useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { Plus, RefreshCw, ShieldCheck } from "lucide-react";
 import { API } from "../App";
@@ -69,8 +69,8 @@ function ChairsAdmin({ auth, onChanged }) {
   };
 
   useEffect(() => {
-    load();
-  }, []);
+  load();
+}, [load]);
 
   const add = async (e) => {
     e.preventDefault();
@@ -184,8 +184,8 @@ function UsersAdmin({ auth }) {
   };
 
   useEffect(() => {
-    load();
-  }, []);
+  load();
+}, [load]);
 
   const set = (k, v) => setForm({ ...form, [k]: v });
 
@@ -343,8 +343,8 @@ function SettingsAdmin({ auth, onChanged }) {
   };
 
   useEffect(() => {
-    load();
-  }, []);
+  load();
+}, [load]);
 
   const set = (k, v) => setForm({ ...form, [k]: v });
 
