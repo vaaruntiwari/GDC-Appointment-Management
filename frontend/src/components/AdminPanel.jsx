@@ -63,10 +63,10 @@ function ChairsAdmin({ auth, onChanged }) {
   const [label, setLabel] = useState("");
   const [error, setError] = useState("");
 
-  const load = async () => {
-    const r = await axios.get(`${API}/admin/chairs`, auth);
-    setChairs(r.data || []);
-  };
+  const load = useCallback(async () => {
+  const r = await axios.get(`${API}/admin/chairs`, auth);
+  setChairs(r.data || []);
+}, [auth]);
 
   useEffect(() => {
   load();
@@ -178,10 +178,10 @@ function UsersAdmin({ auth }) {
   const [form, setForm] = useState({ username: "", name: "", role: "reception", password: "" });
   const [error, setError] = useState("");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const r = await axios.get(`${API}/admin/users`, auth);
     setUsers(r.data || []);
-  };
+  },[auth]);
 
   useEffect(() => {
   load();
@@ -337,10 +337,10 @@ function SettingsAdmin({ auth, onChanged }) {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
 
-  const load = async () => {
+  const load =useCallback(async () => {
     const r = await axios.get(`${API}/admin/settings`, auth);
     if (r.data) setForm(r.data);
-  };
+  },[auth]);
 
   useEffect(() => {
   load();
