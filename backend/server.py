@@ -525,7 +525,7 @@ async def websocket(ws: WebSocket):
 app.include_router(api)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://gdc-appointment-management.vercel.app/"],
+    allow_origins=["https://gdc-appointment-management.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
