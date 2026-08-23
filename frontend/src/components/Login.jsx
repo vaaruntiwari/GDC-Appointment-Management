@@ -4,8 +4,8 @@ import { ChevronRight } from "lucide-react";
 import { API } from "../App";
 
 export default function Login({ onLogin }) {
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   const submit = async (e) => {
@@ -47,7 +47,7 @@ export default function Login({ onLogin }) {
           Sign in <ChevronRight size={17} />
         </button>
       </form>
-      <p className="demo-note">Demo access: admin / admin123 · reception / reception123 · doctor / doctor123</p>
+      {/* <p className="demo-note">Demo access: admin / admin123 · reception / reception123 · doctor / doctor123</p> */}
     </main>
   );
 }
